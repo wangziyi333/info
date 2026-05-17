@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}无权访问 · 员工信息审核系统{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 480px; margin: 60px auto;">
+  <div class="card-body">
+    <div class="permission-card">
+      <div class="permission-icon-lg">!</div>
+      <h3>无权访问</h3>
+      <p>非管理员账户无权访问此页面</p>
+      <a href="{{ url_for('profile') }}" class="btn btn-primary">返回我的信息</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

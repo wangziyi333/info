@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}驳回员工信息 - 员工信息审核系统{% endblock %}
+
+{% block content %}
+<div class="panel">
+    <div class="panel-header">
+        <h2>驳回员工信息</h2>
+    </div>
+    <div class="panel-body">
+        <div class="info-table" style="margin-bottom: 20px;">
+            <div class="info-row">
+                <span class="info-label">姓名：</span>
+                <span class="info-value">{{ user.name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">部门：</span>
+                <span class="info-value">{{ user.department }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">岗位：</span>
+                <span class="info-value">{{ user.position }}</span>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ url_for('reject', user_id=user.id) }}">
+            <div class="form-group">
+                <label class="form-label">驳回原因 <span class="required">*</span></label>
+                <textarea name="reason" class="form-textarea" placeholder="请填写驳回原因，员工将看到此备注" required></textarea>
+            </div>
+            <div class="action-bar center">
+                <button type="submit" class="btn btn-danger">确认驳回</button>
+                <a href="{{ url_for('audit_list') }}" class="btn btn-default">返回</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

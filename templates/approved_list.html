@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}已审核 · 员工信息审核系统{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>已审核列表</h1>
+  <p>共 {{ users|length }} 条已审核记录</p>
+</div>
+
+<div class="card">
+  <div class="card-body" style="padding: 0;">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>姓名</th>
+            <th>部门</th>
+            <th>职务</th>
+            <th>入职时间</th>
+            <th>工龄</th>
+            <th>工龄工资</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.name }}</td>
+            <td>{{ u.department }}</td>
+            <td>{{ u.position }}</td>
+            <td>{{ u.entry_date.strftime('%Y-%m-%d') }}</td>
+            <td>{{ u.work_years }}年</td>
+            <td>{{ u.seniority_salary }}元</td>
+            <td><span class="badge badge--approved"><span class="badge-dot"></span>已审核</span></td>
+            <td>
+              <a href="{{ url_for('reaudit', user_id=u.id) }}" class="btn btn-warning btn-sm">重新审核</a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="empty-row">暂无已审核记录</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

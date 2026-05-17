@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}我的信息 · 员工信息审核系统{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>我的信息</h1>
+  <p>查看并管理您的个人信息</p>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h2>个人信息</h2>
+    <span class="badge{% if user.status == 'pending' %} badge--pending{% elif user.status == 'submitted' %} badge--submitted{% elif user.status == 'rejected' %} badge--rejected{% else %} badge--approved{% endif %}">
+      <span class="badge-dot"></span>
+      {% if user.status == 'pending' %}待确认{% elif user.status == 'submitted' %}待审核{% elif user.status == 'rejected' %}已驳回{% else %}已审核通过{% endif %}
+    </span>
+  </div>
+  <div class="card-body">
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-item-label">姓名</span>
+        <span class="info-item-value">{{ user.name }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-item-label">部门</span>
+        <span class="info-item-value">{{ user.department }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-item-label">职务</span>
+        <span class="info-item-value">{{ user.position }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-item-label">入职时间</span>
+        <span class="info-item-value">{{ user.entry_date.strftime('%Y-%m-%d') }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-item-label">工龄</span>
+        <span class="info-item-value">{{ user.work_years }}<span class="unit">年</span></span>
+      </div>
+      <div class="info-item">
+        <span class="info-item-label">工龄工资</span>
+        <span class="info-item-value">{{ user.seniority_salary }}<span class="unit">元</span></span>
+      </div>
+    </div>
+
+    {% if user.status == 'rejected' and user.reject_reason %}
+    <div class="reject-reason-box">
+      <div class="reject-reason-title">
+        <span class="reject-icon">!</span>
+        审核驳回备注
+      </div>
+      <div class="reject-reason-content">{{ user.reject_reason }}</div>
+    </div>
+    {% endif %}
+
+    {% if user.status == 'pending' %}
+    <div class="action-bar center">
+      <a href="{{ url_for('confirm') }}" class="btn btn-success">确认信息</a>
+      <a href="{{ url_for('edit') }}" class="btn btn-ghost">修改信息</a>
+    </div>
+    {% elif user.status == 'submitted' %}
+    <div class="status-tip">
+      <p>您的信息已提交审核，请等待管理员审核。</p>
+    </div>
+    {% elif user.status == 'rejected' %}
+    <div class="status-tip status-tip--warning">
+      <p>您的信息已被驳回，修改后将直接提交审核。</p>
+    </div>
+    <div class="action-bar center">
+      <a href="{{ url_for('edit') }}" class="btn btn-primary">修改信息</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

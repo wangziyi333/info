@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}审核列表 · 员工信息审核系统{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>审核列表</h1>
+  <p>共 {{ users|length }} 名用户</p>
+</div>
+
+<div class="filter-bar">
+  <a href="{{ url_for('audit_list', status='all') }}" class="filter-btn{% if current_filter == 'all' %} active{% endif %}">全部</a>
+  <a href="{{ url_for('audit_list', status='pending') }}" class="filter-btn{% if current_filter == 'pending' %} active{% endif %}">未提交</a>
+  <a href="{{ url_for('audit_list', status='submitted') }}" class="filter-btn{% if current_filter == 'submitted' %} active{% endif %}">待审核</a>
+  <a href="{{ url_for('audit_list', status='approved') }}" class="filter-btn{% if current_filter == 'approved' %} active{% endif %}">已审核</a>
+  <a href="{{ url_for('audit_list', status='rejected') }}" class="filter-btn{% if current_filter == 'rejected' %} active{% endif %}">已驳回</a>
+</div>
+
+<div class="card">
+  <div class="card-body" style="padding: 0;">
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>姓名</th>
+            <th>角色</th>
+            <th>部门</th>
+            <th>职务</th>
+            <th>入职时间</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.name }}</td>
+            <td>
+              {% if u.role == 'admin' %}
+              <span class="badge badge--admin">管理员</span>
+              {% else %}
+              <span class="badge badge--user">员工</span>
+              {% endif %}
+            </td>
+            <td>{{ u.department }}</td>
+            <td>{{ u.position }}</td>
+            <td>{{ u.entry_date.strftime('%Y-%m-%d') }}</td>
+            <td>
+              {% if u.status == 'pending' %}
+              <span class="badge badge--pending"><span class="badge-dot"></span>未提交</span>
+              {% elif u.status == 'submitted' %}
+              <span class="badge badge--submitted"><span class="badge-dot"></span>待审核</span>
+              {% elif u.status == 'approved' %}
+              <span class="badge badge--approved"><span class="badge-dot"></span>已审核</span>
+              {% elif u.status == 'rejected' %}
+              <span class="badge badge--rejected"><span class="badge-dot"></span>已驳回</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u.id == session.user_id %}
+              <span class="text-muted">当前用户</span>
+              {% elif u.status == 'submitted' %}
+              <a href="{{ url_for('approve', user_id=u.id) }}" class="btn btn-success btn-sm">通过</a>
+              <a href="{{ url_for('reject', user_id=u.id) }}" class="btn btn-danger btn-sm">驳回</a>
+              {% elif u.status == 'approved' %}
+              <a href="{{ url_for('reaudit', user_id=u.id) }}" class="btn btn-warning btn-sm">重新审核</a>
+              {% elif u.status == 'rejected' %}
+              <a href="{{ url_for('reaudit', user_id=u.id) }}" class="btn btn-warning btn-sm">重新审核</a>
+              {% elif u.status == 'pending' %}
+              <span class="text-muted">等待确认</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="empty-row">暂无用户记录</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

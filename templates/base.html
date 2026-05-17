@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}明日学院 · 员工信息审核系统{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app-wrapper">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="sidebar-logo">
+          <span class="sidebar-logo-icon">明</span>
+        </div>
+        <span class="sidebar-brand-text">明日学院</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="{{ url_for('profile') }}" class="sidebar-link{% if request.endpoint == 'profile' %} active{% endif %}">
+          <span class="sidebar-link-icon">&#9670;</span>
+          <span>我的信息</span>
+        </a>
+        {% if session.role == 'admin' %}
+        <div class="sidebar-section-label">管理</div>
+        <a href="{{ url_for('audit_list') }}" class="sidebar-link{% if request.endpoint == 'audit_list' %} active{% endif %}">
+          <span class="sidebar-link-icon">&#9672;</span>
+          <span>审核列表</span>
+        </a>
+        {% endif %}
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="sidebar-user-avatar">{{ session.name[0] }}</div>
+          <div class="sidebar-user-info">
+            <div class="sidebar-user-name">{{ session.name }}</div>
+            <div class="sidebar-user-role">{{ '管理员' if session.role == 'admin' else '员工' }}</div>
+          </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="sidebar-logout">退出登录</a>
+      </div>
+    </aside>
+    <main class="main-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <div class="dialog-mask" id="dialogMask" style="display:none;" onclick="closeDialog()"></div>
+  <div class="dialog-box" id="dialogBox" style="display:none;">
+    <div class="dialog-header">
+      <h3 id="dialogTitle">提示</h3>
+      <button class="dialog-close" onclick="closeDialog()">&times;</button>
+    </div>
+    <div class="dialog-body" id="dialogBody"></div>
+    <div class="dialog-footer">
+      <button class="btn btn-ghost" onclick="closeDialog()">取消</button>
+      <button class="btn btn-primary" id="dialogConfirmBtn">确定</button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p><a href="#">关于我们</a> &middot; <a href="#">联系我们</a> &middot; <a href="#">帮助中心</a></p>
+    <p>2001-2024 明日学院 版权所有</p>
+  </footer>
+
+  <script>
+    window._flashMessages = [
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            {type: '{{ category }}', msg: '{{ message | replace("'", "\\'") }}'},
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    ];
+  </script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
