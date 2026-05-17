@@ -892,6 +892,15 @@ a:hover { color: var(--brand-dark); }
   color: var(--warning, #856404);
 }
 
+.status-tip--warning {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+
+.status-tip--warning p {
+  color: var(--danger);
+}
+
 /* ===== REJECT REASON BOX ===== */
 .reject-reason-box {
   margin: 20px 0;
