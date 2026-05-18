@@ -28,6 +28,17 @@
         <label for="entry_date">入职时间</label>
         <input type="date" id="entry_date" name="entry_date" class="form-control" value="{{ user.entry_date.strftime('%Y-%m-%d') }}" required>
       </div>
+
+      <!-- 新增：工龄 + 工龄工资（可手动修改） -->
+      <div class="form-group">
+        <label for="work_years">工龄（年）</label>
+        <input type="number" id="work_years" name="work_years" class="form-control" value="{{ user.work_years }}" required placeholder="请输入工龄">
+      </div>
+      <div class="form-group">
+        <label for="seniority_salary">工龄工资（元）</label>
+        <input type="number" step="0.01" id="seniority_salary" name="seniority_salary" class="form-control" value="{{ user.seniority_salary }}" required placeholder="请输入工龄工资">
+      </div>
+
       <div class="action-bar">
         <button type="submit" class="btn btn-success">提交审核</button>
         <a href="{{ url_for('profile') }}" class="btn btn-ghost">取消</a>

@@ -29,6 +29,11 @@
           <span class="sidebar-link-icon">&#9672;</span>
           <span>审核列表</span>
         </a>
+        <!-- 👇 我已经帮你加好【添加员工】在这里 👇 -->
+        <a href="{{ url_for('add_user') }}" class="sidebar-link{% if request.endpoint == 'add_user' %} active{% endif %}">
+          <span class="sidebar-link-icon">&#9672;</span>
+          <span>添加员工</span>
+        </a>
         {% endif %}
       </nav>
       <div class="sidebar-footer">

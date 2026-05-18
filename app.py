@@ -8,7 +8,8 @@ pymysql.install_as_MySQLdb()
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here_change_in_production'
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost:3306/online_check?charset=utf8mb4'
+# 你的 MySQL 配置
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@localhost:3308/online_check?charset=utf8'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -93,6 +94,7 @@ def profile():
     return render_template('profile.html', user=user)
 
 
+# ===================== 【已升级】支持手动修改 工龄 + 工龄工资 =====================
 @app.route('/edit', methods=['GET', 'POST'])
 def edit():
     if 'user_id' not in session:
@@ -100,10 +102,11 @@ def edit():
     user = User.query.get(session['user_id'])
     if not user:
         return redirect(url_for('logout'))
-    # 只有已审核通过的用户不能修改
+
     if user.status == 'approved':
         flash('您的信息已审核通过，无法修改', 'error')
         return redirect(url_for('profile'))
+
     if request.method == 'POST':
         user.name = request.form.get('name')
         user.department = request.form.get('department')
@@ -111,29 +114,32 @@ def edit():
         entry_date_str = request.form.get('entry_date')
         if entry_date_str:
             user.entry_date = datetime.strptime(entry_date_str, '%Y-%m-%d').date()
-        today = date.today()
-        years = today.year - user.entry_date.year
-        if (today.month, today.day) < (user.entry_date.month, user.entry_date.day):
-            years -= 1
-        user.work_years = max(years, 0)
-        user.seniority_salary = user.work_years * 200
-        # 如果是已驳回状态，修改后直接提交审核
+
+        # ===================== 【新增功能】手动修改工龄和工龄工资 =====================
+        work_years = request.form.get('work_years')
+        if work_years:
+            user.work_years = int(work_years)
+
+        seniority_salary = request.form.get('seniority_salary')
+        if seniority_salary:
+            user.seniority_salary = float(seniority_salary)
+        # ==============================================================================
+
         if user.status == 'rejected':
             user.status = 'submitted'
         else:
             user.status = 'pending'
+
         user.reject_reason = None
         db.session.commit()
 
-        log = Log(user_id=user.id, action='员工修改个人信息并提交审核', operator=user.name)
+        log = Log(user_id=user.id, action='员工修改个人信息（含工龄/工龄工资）', operator=user.name)
         db.session.add(log)
         db.session.commit()
 
-        if user.status == 'submitted':
-            flash('信息修改成功，已提交审核', 'success')
-        else:
-            flash('信息修改成功，请确认后提交审核', 'success')
+        flash('信息修改成功（工龄/工龄工资已更新）', 'success')
         return redirect(url_for('profile'))
+
     return render_template('edit.html', user=user)
 
 
@@ -144,11 +150,10 @@ def confirm():
     user = User.query.get(session['user_id'])
     if not user:
         return redirect(url_for('logout'))
-    # 只有待审核状态可以确认
     if user.status != 'pending':
         flash('当前状态无法确认', 'error')
         return redirect(url_for('profile'))
-    # 确认后状态变为"已提交审核"，等待管理员审核
+
     user.status = 'submitted'
     user.reject_reason = None
     db.session.commit()
@@ -163,16 +168,12 @@ def confirm():
 
 @app.route('/audit_list')
 def audit_list():
-    """管理员审核列表 - 显示所有用户信息"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     if session.get('role') != 'admin':
         return render_template('no_permission.html')
-    
-    # 获取筛选参数
+
     status_filter = request.args.get('status', 'all')
-    
-    # 根据筛选条件查询所有用户
     query = User.query
     if status_filter == 'pending':
         query = query.filter_by(status='pending')
@@ -182,10 +183,67 @@ def audit_list():
         query = query.filter_by(status='approved')
     elif status_filter == 'rejected':
         query = query.filter_by(status='rejected')
-    
+
     users = query.all()
     return render_template('audit_list.html', users=users, current_filter=status_filter)
 
+@app.route('/add_user', methods=['GET', 'POST'])
+def add_user():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if session.get('role') != 'admin':
+        return render_template('no_permission.html')
+
+    if request.method == 'POST':
+        # 获取表单数据
+        username = request.form.get('username')
+        password = request.form.get('password')
+        name = request.form.get('name')
+        department = request.form.get('department')
+        position = request.form.get('position')
+        entry_date_str = request.form.get('entry_date')
+        work_years = int(request.form.get('work_years', 0))
+        seniority_salary = float(request.form.get('seniority_salary', 0))
+
+        # 判断账号是否已存在
+        exist = User.query.filter_by(username=username).first()
+        if exist:
+            flash('用户名已存在', 'error')
+            return redirect(url_for('add_user'))
+
+        # 转换日期
+        entry_date = datetime.strptime(entry_date_str, '%Y-%m-%d').date()
+
+        # 创建新用户
+        new_user = User(
+            username=username,
+            password=password,
+            name=name,
+            department=department,
+            position=position,
+            entry_date=entry_date,
+            work_years=work_years,
+            seniority_salary=seniority_salary,
+            role='user',
+            status='pending'
+        )
+        db.session.add(new_user)
+        db.session.commit()
+
+        # 记录日志
+        operator = User.query.get(session['user_id'])
+        log = Log(
+            user_id=new_user.id,
+            action='管理员新增员工账号',
+            operator=operator.name if operator else 'admin'
+        )
+        db.session.add(log)
+        db.session.commit()
+
+        flash('添加员工成功！', 'success')
+        return redirect(url_for('audit_list'))
+
+    return render_template('add_user.html')
 
 @app.route('/approve/<int:user_id>')
 def approve(user_id):
@@ -200,7 +258,7 @@ def approve(user_id):
         db.session.commit()
 
         operator = User.query.get(session['user_id'])
-        log = Log(user_id=user.id, action='管理员审核通过员工信息', operator=operator.name if operator else 'admin')
+        log = Log(user_id=user.id, action='管理员审核通过', operator=operator.name if operator else 'admin')
         db.session.add(log)
         db.session.commit()
 
@@ -217,31 +275,30 @@ def reject(user_id):
     user = User.query.get(user_id)
     if not user:
         return redirect(url_for('audit_list'))
-    
+
     if request.method == 'POST':
         reason = request.form.get('reason', '').strip()
         if not reason:
             flash('请填写驳回原因', 'error')
             return redirect(url_for('reject', user_id=user_id))
-        
+
         user.status = 'rejected'
         user.reject_reason = reason
         db.session.commit()
 
         operator = User.query.get(session['user_id'])
-        log = Log(user_id=user.id, action=f'管理员驳回员工信息，原因：{reason}', operator=operator.name if operator else 'admin')
+        log = Log(user_id=user.id, action=f'驳回：{reason}', operator=operator.name if operator else 'admin')
         db.session.add(log)
         db.session.commit()
 
         flash(f'员工 {user.name} 已驳回', 'success')
         return redirect(url_for('audit_list'))
-    
+
     return render_template('reject.html', user=user)
 
 
 @app.route('/reaudit/<int:user_id>')
 def reaudit(user_id):
-    """重新审核 - 将员工打回待审核状态"""
     if 'user_id' not in session:
         return redirect(url_for('login'))
     if session.get('role') != 'admin':
@@ -253,11 +310,11 @@ def reaudit(user_id):
         db.session.commit()
 
         operator = User.query.get(session['user_id'])
-        log = Log(user_id=user.id, action='管理员重新审核（打回待审核）', operator=operator.name if operator else 'admin')
+        log = Log(user_id=user.id, action='管理员打回待审核', operator=operator.name if operator else 'admin')
         db.session.add(log)
         db.session.commit()
 
-        flash(f'员工 {user.name} 已打回待审核状态', 'success')
+        flash(f'员工 {user.name} 已打回待审核', 'success')
     return redirect(url_for('audit_list'))
 
 
@@ -267,35 +324,16 @@ def init_db():
         db.drop_all()
         db.create_all()
         if not User.query.filter_by(username='admin').first():
-            admin = User(
-                username='admin',
-                password='admin',
-                name='系统管理员',
-                department='管理部',
-                position='管理员',
-                entry_date=date(2020, 1, 1),
-                work_years=4,
-                seniority_salary=800.00,
-                role='admin',
-                status='approved'
-            )
+            admin = User(username='admin', password='admin', name='系统管理员', department='管理部', position='管理员',
+                         entry_date=date(2020, 1, 1), work_years=4, seniority_salary=800, role='admin',
+                         status='approved')
             db.session.add(admin)
         if not User.query.filter_by(username='user01').first():
-            user = User(
-                username='user01',
-                password='123456',
-                name='张三',
-                department='技术部',
-                position='工程师',
-                entry_date=date(2022, 6, 15),
-                work_years=2,
-                seniority_salary=400.00,
-                role='user',
-                status='pending'
-            )
-            db.session.add(user)
+            u = User(username='user01', password='123456', name='张三', department='技术部', position='工程师',
+                     entry_date=date(2022, 6, 15), work_years=2, seniority_salary=400, role='user', status='pending')
+            db.session.add(u)
         db.session.commit()
-    return '数据库初始化完成，默认账号：admin/admin，user01/123456'
+    return '初始化成功'
 
 
 if __name__ == '__main__':
