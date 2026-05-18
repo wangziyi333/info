@@ -44,11 +44,11 @@ CREATE TABLE IF NOT EXISTS `log` (
 
 -- 5. 插入默认管理员账号
 INSERT INTO `user` (`username`, `password`, `name`, `department`, `position`, `entry_date`, `work_years`, `seniority_salary`, `role`, `status`)
-VALUES ('admin', 'admin', '系统管理员', '管理部', '管理员', '2020-01-01', 4, 800.00, 'admin', 'approved')
+VALUES ('admin', 'admin', '系统管理员', '管理部', '管理员', '2020-01-01', 4, 800.00, 'admin', 'approved');
 
 -- 6. 插入默认普通员工账号
 INSERT INTO `user` (`username`, `password`, `name`, `department`, `position`, `entry_date`, `work_years`, `seniority_salary`, `role`, `status`)
-VALUES ('user01', '123456', '张三', '技术部', '工程师', '2022-06-15', 2, 400.00, 'user', 'pending')
+VALUES ('user01', '123456', '张三', '技术部', '工程师', '2022-06-15', 2, 400.00, 'user', 'pending');
 
 -- 7. 查看创建结果
 SELECT '数据库初始化完成！' AS message;
