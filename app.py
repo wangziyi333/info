@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key_here_change_in_production'
 
 # 你的 MySQL 配置
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:root@localhost:3308/online_check?charset=utf8'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost:3306/online_check?charset=utf8'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
