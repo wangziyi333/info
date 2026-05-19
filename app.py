@@ -2,14 +2,26 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, date
 import pymysql
+import os
 
 pymysql.install_as_MySQLdb()
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here_change_in_production'
 
-# 你的 MySQL 配置
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost:3306/online_check?charset=utf8'
+# 从环境变量读取密钥，如果没有则使用默认值（生产环境必须设置环境变量）
+app.secret_key = os.environ.get('SECRET_KEY', 'your_secret_key_here_change_in_production')
+
+# 数据库配置：优先从环境变量读取，适配本地和云端部署
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    # 适配 PostgreSQL 等数据库 URL 格式
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+else:
+    # 本地 MySQL 配置
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost:3306/online_check?charset=utf8'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -337,4 +349,8 @@ def init_db():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # 生产环境使用环境变量配置的端口，默认5000
+    port = int(os.environ.get('PORT', 5000))
+    # 生产环境关闭 debug 模式
+    debug = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(host='0.0.0.0', port=port, debug=debug)
