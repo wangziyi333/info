@@ -7,7 +7,7 @@ app = Flask(__name__)
 app.secret_key = "test_key_123456"
 
 #  Render 免费版能用的数据库（不写文件，不会 500）
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/online_check.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "connect_args": {"check_same_thread": False}
