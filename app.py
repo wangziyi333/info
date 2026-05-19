@@ -1,29 +1,24 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, date
-import pymysql
 import os
-
-pymysql.install_as_MySQLdb()
 
 app = Flask(__name__)
 
-# 从环境变量读取密钥，如果没有则使用默认值（生产环境必须设置环境变量）
+# 从环境变量读取密钥，如果没有则使用默认值
 app.secret_key = os.environ.get('SECRET_KEY', 'your_secret_key_here_change_in_production')
 
-# 数据库配置：优先从环境变量读取，适配本地和云端部署
+# ===================== 【修复】数据库配置：本地+云端通用 =====================
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
-    # 适配 PostgreSQL 等数据库 URL 格式
     if DATABASE_URL.startswith('postgres://'):
         DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
 else:
-    # 本地 MySQL 配置
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@localhost:3306/online_check?charset=utf8'
+    # 本地使用SQLite，无需安装数据库
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///online_check.db'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 db = SQLAlchemy(app)
 
 
@@ -67,6 +62,12 @@ class Log(db.Model):
     create_time = db.Column(db.DateTime, default=datetime.now)
 
 
+# ===================== 【修复】Render 健康检查 =====================
+@app.route('/health')
+def health():
+    return "ok", 200
+
+
 @app.route('/')
 def index():
     if 'user_id' not in session:
@@ -106,7 +107,6 @@ def profile():
     return render_template('profile.html', user=user)
 
 
-# ===================== 【已升级】支持手动修改 工龄 + 工龄工资 =====================
 @app.route('/edit', methods=['GET', 'POST'])
 def edit():
     if 'user_id' not in session:
@@ -127,7 +127,6 @@ def edit():
         if entry_date_str:
             user.entry_date = datetime.strptime(entry_date_str, '%Y-%m-%d').date()
 
-        # ===================== 【新增功能】手动修改工龄和工龄工资 =====================
         work_years = request.form.get('work_years')
         if work_years:
             user.work_years = int(work_years)
@@ -135,7 +134,6 @@ def edit():
         seniority_salary = request.form.get('seniority_salary')
         if seniority_salary:
             user.seniority_salary = float(seniority_salary)
-        # ==============================================================================
 
         if user.status == 'rejected':
             user.status = 'submitted'
@@ -199,6 +197,7 @@ def audit_list():
     users = query.all()
     return render_template('audit_list.html', users=users, current_filter=status_filter)
 
+
 @app.route('/add_user', methods=['GET', 'POST'])
 def add_user():
     if 'user_id' not in session:
@@ -207,7 +206,6 @@ def add_user():
         return render_template('no_permission.html')
 
     if request.method == 'POST':
-        # 获取表单数据
         username = request.form.get('username')
         password = request.form.get('password')
         name = request.form.get('name')
@@ -217,16 +215,13 @@ def add_user():
         work_years = int(request.form.get('work_years', 0))
         seniority_salary = float(request.form.get('seniority_salary', 0))
 
-        # 判断账号是否已存在
         exist = User.query.filter_by(username=username).first()
         if exist:
             flash('用户名已存在', 'error')
             return redirect(url_for('add_user'))
 
-        # 转换日期
         entry_date = datetime.strptime(entry_date_str, '%Y-%m-%d').date()
 
-        # 创建新用户
         new_user = User(
             username=username,
             password=password,
@@ -242,7 +237,6 @@ def add_user():
         db.session.add(new_user)
         db.session.commit()
 
-        # 记录日志
         operator = User.query.get(session['user_id'])
         log = Log(
             user_id=new_user.id,
@@ -256,6 +250,7 @@ def add_user():
         return redirect(url_for('audit_list'))
 
     return render_template('add_user.html')
+
 
 @app.route('/approve/<int:user_id>')
 def approve(user_id):
@@ -330,27 +325,28 @@ def reaudit(user_id):
     return redirect(url_for('audit_list'))
 
 
+# ===================== 【修复】安全的数据库初始化 =====================
 @app.route('/init_db')
 def init_db():
-    with app.app_context():
-        db.drop_all()
-        db.create_all()
-        if not User.query.filter_by(username='admin').first():
-            admin = User(username='admin', password='admin', name='系统管理员', department='管理部', position='管理员',
-                         entry_date=date(2020, 1, 1), work_years=4, seniority_salary=800, role='admin',
-                         status='approved')
-            db.session.add(admin)
-        if not User.query.filter_by(username='user01').first():
-            u = User(username='user01', password='123456', name='张三', department='技术部', position='工程师',
-                     entry_date=date(2022, 6, 15), work_years=2, seniority_salary=400, role='user', status='pending')
-            db.session.add(u)
-        db.session.commit()
-    return '初始化成功'
+    try:
+        with app.app_context():
+            db.create_all()
+            if not User.query.filter_by(username='admin').first():
+                admin = User(username='admin', password='admin', name='系统管理员', department='管理部', position='管理员',
+                             entry_date=date(2020, 1, 1), work_years=4, seniority_salary=800, role='admin',
+                             status='approved')
+                db.session.add(admin)
+            if not User.query.filter_by(username='user01').first():
+                u = User(username='user01', password='123456', name='张三', department='技术部', position='工程师',
+                         entry_date=date(2022, 6, 15), work_years=2, seniority_salary=400, role='user', status='pending')
+                db.session.add(u)
+            db.session.commit()
+        return "✅ 数据库初始化成功！<br>管理员：admin / admin<br>用户：user01 / 123456"
+    except Exception as e:
+        return f"❌ 初始化失败：{str(e)}"
 
 
 if __name__ == '__main__':
-    # 生产环境使用环境变量配置的端口，默认5000
     port = int(os.environ.get('PORT', 5000))
-    # 生产环境关闭 debug 模式
     debug = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     app.run(host='0.0.0.0', port=port, debug=debug)
